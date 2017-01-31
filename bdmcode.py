@@ -14,8 +14,13 @@
 # limitations under the License.                                           #
 ############################################################################
 
-""" This module contains code relating to the encoding and decoding of codes
-based on block-diagonal encoding matrices. """
+""" This module is an implementation of the erasure code presented by
+Severinson et al. in the paper 'Block-Diagonal Coding for Distributed Computing
+With Straggling Servers'. The code provides efficient encoding and erasure
+correction by exploiting a block-diagonal encoding matrix.
+
+The paper is available at https://arxiv.org/abs/1701.06631
+"""
 
 import unittest
 from multiprocessing import Pool
