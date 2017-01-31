@@ -26,6 +26,7 @@ import unittest
 from multiprocessing import Pool
 import numpy as np
 import scipy as sp
+import linalg
 
 class CodingError(Exception):
     """ Base class for exceptions in this module. """
@@ -56,44 +57,10 @@ class BDMEncoder(object):
         self.rows = rows
         self.cols = cols
         self.blocks = blocks
-        self.bdm, self.block = self.construct_bdm(rows, cols, blocks)
+        self.bdm, self.block = linalg.construct_bdm(rows, cols, blocks)
         self.block_rows = int(rows / blocks)
         self.block_cols = int(cols / blocks)
         return
-
-    @staticmethod
-    def construct_bdm(rows, cols, blocks):
-        """ Construct a block-diagonal encoding matrix with rows rows and cols
-        columns from blocks blocks.
-
-        Each block is a real-numbered matrix whose elements are generated randomly
-        from a Gaussian distribution with zero mean and unit variance.
-
-        Args:
-        rows: Number of rows of the resulting encoding matrix.
-        cols: Number of columns of the resulting encoding matrix.
-        blocks: Number of blocks.
-
-        Returns:
-        The resulting encoding matrix.
-
-        Raises:
-        EncoderError: If the paramaters are invalid.
-        """
-
-        if rows % blocks != 0:
-            raise EncoderError('rows must be divisible by blocks.')
-        if cols % blocks != 0:
-            raise EncoderError('cols must be divisible by blocks.')
-
-        block_rows = int(rows / blocks)
-        block_cols = int(cols / blocks)
-        block = np.random.randn(block_rows, block_cols)
-        bdm = np.zeros([rows, cols])
-        for i in range(blocks):
-            bdm[i*block_rows:(i+1)*block_rows, i*block_cols:(i+1)*block_cols] = block
-
-        return bdm, block
 
     def encode(self, source):
         """ Encode the source matrix
@@ -207,43 +174,8 @@ class BDMEncoder(object):
 
         return source
 
-def null(matrix, eps=1e-12):
-    """ Return a matrix whose columns span the null space of matrix.
-
-    Source:
-    https://stackoverflow.com/questions/5889142/python-numpy-scipy-finding-the-null-space-of-a-matrix
-    """
-    _, s, vh = np.linalg.svd(matrix)
-    padding = max(0, np.shape(matrix)[1]-np.shape(s)[0])
-    null_mask = np.concatenate(((s <= eps), np.ones((padding,), dtype=bool)), axis=0)
-    null_space = sp.compress(null_mask, vh, axis=0)
-    return sp.transpose(null_space)
-
 class Tests(unittest.TestCase):
     """ Module unit tests. """
-
-    def test_null(self):
-        """ Test that the code can find the null space of a matrix. """
-        eps = 1e-12
-        matrix = np.array([[2, 3, 4], [-4, 2, 3]])
-        self.assertTrue(np.dot(matrix, null(matrix)).sum() < eps)
-
-        matrix = matrix.T
-        self.assertTrue(np.dot(matrix, null(matrix)).sum() < eps)
-
-    def test_bdm_null(self):
-        """ Test that the code can find the null space of a BDM matrix. """
-        eps = 1e-12
-        bdm, _ = BDMEncoder.construct_bdm(5, 4, 1)
-        bdm_null = null(bdm.T)
-        self.assertTrue(np.dot(bdm_null.T, bdm).sum() < eps)
-
-        bdm, _ = BDMEncoder.construct_bdm(12, 8, 4)
-        bdm_null = null(bdm.T)
-        self.assertTrue(np.dot(bdm_null.T, bdm).sum() < eps)
-
-        with self.assertRaises(EncoderError):
-            BDMEncoder.construct_bdm(12, 8, 8)
 
     def test_erasure_pattern(self):
         """ Test that decodeable erasure patterns are detected properly. """
